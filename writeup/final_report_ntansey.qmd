@@ -1,0 +1,760 @@
+
+---
+title: "Replication of Sainburg 2020 and Combination with Smith & Lewicki 2006"
+format:
+  html:
+    code-fold: false
+jupyter: python3
+---
+
+## Introduction
+
+During Tim Sainburg's time at UCSD in Tim Gentner's lab, he published several papers, creating and inspiring many of the analysis techniques used to this day within animal vocalization research. Among these is the method described in "Finding, visualizing, and quantifying latent structure across diverse animal vocal repertoires", which is agnostic to specific animal vocalizations. Part of my prior research has been in adaptations of vocalizations to environmental distortion, this toolbox could allow easier comparisons of animals dealing with specific environments. Additionally, understanding and replicating the computational methods will establish another tool to use at baseline for any analysis of ongoing experimentation within the Gentner lab. Due to my computational background, and discussions with Tim Gentner, I will also add the base framework of sparse coding representations as outlined by Smith & Lewicki's "Efficient Auditory Coding", which I have used to success in past research to isolate the essential features of audio.
+
+This paper uses dimensional reduction techniques, primarily UMAP, on syllable level segments of animal vocalizations, and develops methods for rating the dimensional space from the clustering that appears. The purpose of sparse coding is to see if computation and results can be improved by removing less important information from the animal vocalizations, only leaving features that truly drive differences between syllables.
+
+
+github repo: https://github.com/nathanjtansey/sainburg2020
+
+Sainburg 2020 link: https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1008228
+
+Smith & Lewicki 2006 link: https://nature.com/articles/nature04485    
+
+
+## Methods
+
+### Power Analysis
+
+Power analysis should not be necessary due to the nature of the original paper.
+
+
+### Planned Sample
+
+The data required to replicate all figures and analysis done in the paper is hosted at https://zenodo.org/records/3775893#.X3YdqZNKhTY, or linked to Tim Sainburg's github. This paper utilized data from 11 Bengalese Finches, summed up to 2965 total birdsongs of varying lengths. Due to the 1.4 gb zipped size, this data is not hosted on github.
+
+### Materials
+
+This will primarily use the avgn_paper repository hosted at https://github.com/timsainb/avgn_paper.
+
+### Procedure	
+
+
+General Preprocessing:
+With each specific song, start by segmenting the data into specific syllables via dynamic thresholding, storing specific metadata for each syllable, collecting all syllables into a pandas df. These syllables will be converted from waveforms to Mel spectrograms, and then normalized and padded to be the same length. These are the same methods used in the original article.
+
+Sparse Coding Preprocessing:
+To learn the sparse components, different birdsongs will be imported from the Gentner lab. This will allow for separate training and testing datasets. A sklearn dictionary learner will be fitted using the training data in Mel spectrogram form on 20 components, and then fed into the sparse coder to create a common coder dictionary. The coder can be now used to convert any Mel spectrogram into sparse components. Theoretically, these sparse components should contain all of the relevant information, and none of the irrelevant information. The sparse coder can be run on the segmented data, giving sparse syllable components. These sparse syllable components can also be used to reconstruct syllable spectrograms by convolving the sparse components with the dictionary elements. Both the sparse syallable components and reconstructed syllable spectrograms will be saved for further analysis.
+
+
+### Analysis Plan
+
+"Two methods for choosing feature-sets are commonly used by experimenters when the features underlying vocal data are unknown: (1) extract common descriptive statistics of vocalizations, sometimes called Predefined Acoustical Features (PAFs; e.g. mean fundamental frequency, syllable length, spectral entropy) and make comparisons on the basis of PAFs, or (2) make comparisons based upon time-frequency representations of the data (i.e. spectrograms) where the magnitude of each time-frequency component in the spectrogram is treated as an independent feature (or dimension) of the vocalization." (Sainburg 2020)
+
+
+(1) The dataset will compute the PAFs to prepare the birdsong syllables for projection into UMAP space, saved into a dataframe for each bird, song, and syllable.
+
+(2) Ultimately, this analysis will use hopkins statistic applied to the UMAP projections to measure the clusterability of the birdsong syllables. "The Hopkin’s statistic compares the distance between nearest neighbors in a dataset (e.g. syllables projected into UMAP), to the distance between points from a randomly sampled dataset and their nearest neighbors. The statistic computes clusterability based upon the assumption that if the real dataset is more clustered than the randomly sampled dataset, points will be closer together than in the randomly sampled dataset." (Sainburg 2020). As the statistic approaches 0, the sample is more clustered than the randomly sampled dataset.
+
+
+This initial analysis is designed to test the relevance of the sparse coding framework with Tim Sainburg's analysis technique. At this point, it will likely become clear through the hopkins statistics the interaction between these two different methods. If sparse coding does not fit into this framework, the ensuing analysis will be performed in a computational reproducability capacity only. If sparse coding frameworks perform similarly, and especially if it performs better, the data will continue to be applied.
+
+Use HDBSCAN to identify specific clusters in UMAP projected space, and then plot the sequential organization of each label. Ideally this should be consistent across all songs from a given bird, and can be visualized over original songs. 
+
+
+### Differences from Original Study
+
+<!-- Explicitly describe known differences in sample, setting, procedure, and analysis plan from original study.  The goal, of course, is to minimize those differences, but differences will inevitably occur.  Also, note whether such differences are anticipated to make a difference based on claims in the original article or subsequent published research on the conditions for obtaining the effect. -->
+
+The primary intended difference here comes from the introduction of the sparse coding element to the inputs. These are unknown whether they will impact results. Presumably, the sparse coder will use encode similar important features to the current analysis, that will lend themselves to similar results ultimately in high dimensional space.
+
+The same initial dataset will be used, but many of the techniques past this are not consistent. In particular, the song syllable segmenter and UMAP have variance that can lead to small differences. Due to the large sample size and method of the paper, I do not expect this to impact many conclusions and results. Hopkins statistic can also have small differences depending on the sample, leading to the use of error bars in the original study. All parameters that were available have been used, parameters that weren't available are kept to sensible options, all listed within the project github.    
+
+
+## Results
+
+### Data preparation
+
+Data preparation following the analysis plan. The intial data preparation is too long and complex for this report, but is hosted at https://github.com/nathanjtansey/sainburg2020. These notebooks walk through data preparation for creating the json files for analysis, the syllable segmentation, and the PAF calculations. Part 1 of the files set up the basic json file to read from, part 2 segments out specific syllables and creates a dataframe with the information, part 3 creates the UMAP projections. A section of part 3 has been placed in the confirmatory analysis section to create the visualizations and hopkins statistic measure.
+
+
+### Confirmatory analysis
+
+```{python}
+import pickle
+with open (r'F:/rep_rep.pkl', 'rb') as file:
+  z_rep, clusterer_rep, specs_rep = pickle.load(file)
+
+with open (r'F:/sparse_rep (2).pkl', 'rb') as file:
+  z_sparse, clusterer_sparse, specs_sparse = pickle.load(file)
+
+
+# colors seem to be causing issues here, removed to make sure things work
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import umap
+import matplotlib.pyplot as plt
+from tqdm.autonotebook import tqdm
+import matplotlib.collections as mcoll
+import matplotlib.path as mpath
+from matplotlib import collections as mc
+import seaborn as sns
+from matplotlib.lines import Line2D
+from matplotlib import gridspec
+from scipy.spatial import Voronoi, voronoi_plot_2d
+from scipy.spatial import cKDTree
+from matplotlib import lines
+import matplotlib.colors
+import matplotlib.cm as cm
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
+
+def scatter_projections(
+    syllables=None,
+    projection=None,
+    labels=None,
+    ax=None,
+    figsize=(10, 10),
+    alpha=0.1,
+    s=1,
+    color="k",
+    color_palette="tab20",
+    categorical_labels=True,
+    show_legend=True,
+    tick_pos="bottom",
+    tick_size=16,
+    cbar_orientation="vertical",
+    log_x=False,
+    log_y=False,
+    grey_unlabelled=True,
+    fig=None,
+    colornorm=False,
+    rasterized=True,
+    equalize_axes=True,
+    print_lab_dict=False,  # prints color scheme
+):
+    """ creates a scatterplot of syllables using some projection
+    """
+    if projection is None:
+        if syllables is None:
+            raise ValueError("Either syllables or projections must by passed")
+
+        syllables_flattened = np.reshape(
+            syllables, (np.shape(syllables)[0], np.prod(np.shape(syllables)[1:]))
+        )
+
+        # if no projection is passed, assume umap
+        fit = umap.UMAP(min_dist=0.25, verbose=True)
+        u_all = fit.fit_transform(syllables_flattened)
+
+    # color labels
+    if labels is not None:
+        if categorical_labels:
+            if (color_palette == "tab20") & (len(np.unique(labels)) < 20):
+                pal = sns.color_palette(color_palette, n_colors=20)
+                pal = np.array(pal)[
+                    np.linspace(0, 19, len(np.unique(labels))).astype("int")
+                ]
+                # print(pal)
+            else:
+                pal = sns.color_palette(color_palette, n_colors=len(np.unique(labels)))
+            lab_dict = {lab: pal[i] for i, lab in enumerate(np.unique(labels))}
+            if grey_unlabelled:
+                if -1 in lab_dict.keys():
+                    lab_dict[-1] = [0.95, 0.95, 0.95, 1.0]
+                if print_lab_dict:
+                    print(lab_dict)
+            # colors = np.array([lab_dict[i] for i in labels])
+    else:
+        colors = color
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+
+        # plot
+    if colornorm:
+        norm = norm = matplotlib.colors.LogNorm()
+    else:
+        norm = None
+    if categorical_labels or labels is None:
+        ax.scatter(
+            projection[:, 0],
+            projection[:, 1],
+            rasterized=rasterized,
+            alpha=alpha,
+            s=s,
+            # color=colors,
+            norm=norm,
+        )
+
+    else:
+        cmin = np.quantile(labels, 0.01)
+        cmax = np.quantile(labels, 0.99)
+        sct = ax.scatter(
+            projection[:, 0],
+            projection[:, 1],
+            vmin=cmin,
+            vmax=cmax,
+            cmap=plt.get_cmap(color_palette),
+            rasterized=rasterized,
+            alpha=alpha,
+            s=s,
+            c=labels,
+        )
+
+    if log_x:
+        ax.set_xscale("log")
+    if log_y:
+        ax.set_yscale("log")
+
+    if labels is not None:
+        if categorical_labels == True:
+            legend_elements = [
+                Line2D([0], [0], marker="o", color=value, label=key)
+                for key, value in lab_dict.items()
+            ]
+        if show_legend:
+            if not categorical_labels:
+                if cbar_orientation == "horizontal":
+                    axins1 = inset_axes(
+                        ax,
+                        width="50%",  # width = 50% of parent_bbox width
+                        height="5%",  # height : 5%
+                        loc="upper left",
+                    )
+                    # cbar = fig.colorbar(sct, cax=axins1, orientation=cbar_orientation
+
+                else:
+                    axins1 = inset_axes(
+                        ax,
+                        width="5%",  # width = 50% of parent_bbox width
+                        height="50%",  # height : 5%
+                        loc="lower right",
+                    )
+                cbar = fig.colorbar(sct, cax=axins1, orientation=cbar_orientation)
+                cbar.ax.tick_params(labelsize=tick_size)
+                axins1.xaxis.set_ticks_position(tick_pos)
+            else:
+                ax.legend(handles=legend_elements)
+    if equalize_axes:
+        ax.axis("equal")
+    return ax
+
+
+def draw_projection_transitions(
+    projections,
+    sequence_ids,
+    sequence_pos,
+    ax=None,
+    nseq=-1,
+    cmap=plt.get_cmap("cubehelix"),
+    alpha=0.05,
+    linewidth=3,
+    range_pad=0.1,
+):
+    """ draws a line plot of each transition
+    """
+    # make a plot if needed
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 10))
+
+    for sequence in tqdm(np.unique(sequence_ids)):
+        seq_mask = sequence_ids == sequence
+        seq = sequence_pos[seq_mask]
+        projection_seq = projections[seq_mask]
+        colorline(
+            projection_seq[:, 0],
+            projection_seq[:, 1],
+            ax,
+            np.linspace(0, 1, len(projection_seq)),
+            cmap=cmap,
+            linewidth=linewidth,
+            alpha=alpha,
+        )
+    xmin, xmax = np.sort(np.vstack(projections)[:, 0])[
+        np.array([int(len(projections) * 0.01), int(len(projections) * 0.99)])
+    ]
+    ymin, ymax = np.sort(np.vstack(projections)[:, 1])[
+        np.array([int(len(projections) * 0.01), int(len(projections) * 0.99)])
+    ]
+    xmin -= (xmax - xmin) * range_pad
+    xmax += (xmax - xmin) * range_pad
+    ymin -= (ymax - ymin) * range_pad
+    ymax += (ymax - ymin) * range_pad
+
+    ax.set_xlim((xmin, xmax))
+    ax.set_ylim((ymin, ymax))
+    return ax
+
+
+def colorline(
+    x,
+    y,
+    ax,
+    z=None,
+    cmap=plt.get_cmap("copper"),
+    norm=plt.Normalize(0.0, 1.0),
+    linewidth=3,
+    alpha=1.0,
+):
+    """ Plot a colored line with coordinates x and y
+    http://nbviewer.ipython.org/github/dpsanders/matplotlib-examples/blob/master/colorline.ipynb
+    http://matplotlib.org/examples/pylab_examples/multicolored_line.html
+    Optionally specify colors in the array z
+    Optionally specify a colormap, a norm function and a line width
+    """
+
+    # Default colors equally spaced on [0,1]:
+    if z is None:
+        z = np.linspace(0.0, 1.0, len(x))
+
+    # Special case if a single number:
+    if not hasattr(z, "__iter__"):  # to check for numerical input -- this is a hack
+        z = np.array([z])
+
+    z = np.asarray(z)
+
+    segments = make_segments(x, y)
+    lc = mcoll.LineCollection(
+        segments, array=z, cmap=cmap, norm=norm, linewidth=linewidth, alpha=alpha
+    )
+
+    ax.add_collection(lc)
+
+    return lc
+
+
+def make_segments(x, y):
+    """
+    Create list of line segments from x and y coordinates, in the correct format
+    for LineCollection: an array of the form numlines x (points per line) x 2 (x
+    and y) array
+    """
+
+    points = np.array([x, y]).T.reshape(-1, 1, 2)
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+    return segments
+
+
+def plot_label_cluster_transitions(
+    syllable_df,
+    label_of_interest,
+    superlabel="syllables_labels",
+    sublabel="hdbscan_labels",
+    projection_column="umap",
+    line_alpha=0.01,
+    scatter_alpha=0.1,
+    color_palette="tab20",
+    ax=None,
+):
+    """ Given a two sets of labels, plot the transitions 
+    from one set of labels grouped by the second set of
+    labels
+    """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 10))
+
+    # subset the dataframe that is in the main cluster of interest
+    subset_df = syllable_df[syllable_df[superlabel].values == label_of_interest]
+
+    projections = np.array(list(syllable_df[projection_column].values))
+
+    # unique labels and colors
+    unique_labels = np.unique(subset_df[sublabel].values)
+
+    # we make colors relative to all labels so this plot can match other plots
+    # cpal = sns.color_palette(color_palette, len(unique_labels))
+    all_labels = np.unique(syllable_df[sublabel].values)
+    cpal = sns.color_palette(color_palette, len(all_labels))
+    cpal_dict = {label: np.array(cpal)[all_labels == label] for label in unique_labels}
+    # scatter background
+    ax.scatter(
+        projections[:, 0], projections[:, 1], color="k", alpha=scatter_alpha, s=1
+    )
+
+    # for every HDBSCAN label group in the subsetted dataframe
+    for li, lab in enumerate(tqdm(unique_labels)):
+        color = cpal_dict[lab]
+        if lab == -1:
+            continue
+        # mask for only this label (orig + hdbscan)
+        label_of_interest_mask = (
+            syllable_df[superlabel].values == label_of_interest
+        ) & (syllable_df[sublabel].values == lab)
+
+        ax.scatter(
+            projections[label_of_interest_mask][:, 0],
+            projections[label_of_interest_mask][:, 1],
+            s=1,
+            color=color,
+        )
+
+        # DRAW OUTPUT FROM CLUSTER
+        # TODO - ensure that inbound syllable_sequence_pos is not zero
+        outbound = projections[label_of_interest_mask]
+        inbound = projections[1:][label_of_interest_mask[:-1]]
+        segments = [[i, j] for i, j in zip(outbound, inbound)]
+        lc = mc.LineCollection(segments, colors=color, linewidths=1, alpha=line_alpha)
+        ax.add_collection(lc)
+
+        # DRAW INBOUND FROM CLUSTER
+        outbound = projections[:-1][label_of_interest_mask[1:]]
+        inbound = projections[label_of_interest_mask]
+        segments = [[i, j] for i, j in zip(outbound, inbound)]
+        lc = mc.LineCollection(segments, colors=color, linewidths=1, alpha=line_alpha)
+        ax.add_collection(lc)
+
+    return ax
+
+
+from PIL import Image
+import io
+
+
+def scatter_spec(
+    z,
+    specs,
+    column_size=10,
+    pal_color="hls",
+    matshow_kwargs={"cmap": plt.cm.Greys},
+    scatter_kwargs={"alpha": 0.5, "s": 1},
+    line_kwargs={"lw": 1, "ls": "dashed", "alpha": 1},
+    color_points=False,
+    figsize=(10, 10),
+    range_pad=0.1,
+    x_range=None,
+    y_range=None,
+    enlarge_points=0,
+    draw_lines=True,
+    n_subset=-1,
+    ax=None,
+    show_scatter=True,
+    border_line_width=1,
+    img_origin="lower",
+):
+    """
+    """
+    n_columns = column_size * 4 - 4
+    pal = sns.color_palette(pal_color, n_colors=n_columns)
+
+    fig = plt.figure(figsize=figsize)
+    gs = gridspec.GridSpec(column_size, column_size)
+
+    if x_range is None and y_range is None:
+        xmin, xmax = np.sort(np.vstack(z)[:, 0])[
+            np.array([int(len(z) * 0.01), int(len(z) * 0.99)])
+        ]
+        ymin, ymax = np.sort(np.vstack(z)[:, 1])[
+            np.array([int(len(z) * 0.01), int(len(z) * 0.99)])
+        ]
+        # xmin, ymin = np.min(z, axis=0)
+        # xmax, ymax = np.max(z, axis=0)
+        xmin -= (xmax - xmin) * range_pad
+        xmax += (xmax - xmin) * range_pad
+        ymin -= (ymax - ymin) * range_pad
+        ymax += (ymax - ymin) * range_pad
+    else:
+        xmin, xmax = x_range
+        ymin, ymax = y_range
+
+    x_block = (xmax - xmin) / column_size
+    y_block = (ymax - ymin) / column_size
+
+    # ignore segments outside of range
+    z = np.array(z)
+    mask = np.array(
+        [(z[:, 0] > xmin) & (z[:, 1] > ymin) & (z[:, 0] < xmax) & (z[:, 1] < ymax)]
+    )[0]
+
+    if "labels" in scatter_kwargs:
+        scatter_kwargs["labels"] = np.array(scatter_kwargs["labels"])[mask]
+    specs = np.array(specs)[mask]
+    z = z[mask]
+
+    # prepare the main axis
+    main_ax = fig.add_subplot(gs[1 : column_size - 1, 1 : column_size - 1])
+    # main_ax.scatter(z[:, 0], z[:, 1], **scatter_kwargs)
+    if show_scatter:
+        scatter_projections(projection=z, ax=main_ax, fig=fig, **scatter_kwargs)
+
+    # loop through example columns
+    axs = {}
+    for column in range(n_columns):
+        # get example column location
+        if column < column_size:
+            row = 0
+            col = column
+
+        elif (column >= column_size) & (column < (column_size * 2) - 1):
+            row = column - column_size + 1
+            col = column_size - 1
+
+        elif (column >= ((column_size * 2) - 1)) & (column < (column_size * 3 - 2)):
+            row = column_size - 1
+            col = column_size - 3 - (column - column_size * 2)
+        elif column >= column_size * 3 - 3:
+            row = n_columns - column
+            col = 0
+
+        axs[column] = {"ax": fig.add_subplot(gs[row, col]), "col": col, "row": row}
+        # label subplot
+        """axs[column]["ax"].text(
+            x=0.5,
+            y=0.5,
+            s=column,
+            horizontalalignment="center",
+            verticalalignment="center",
+            transform=axs[column]["ax"].transAxes,
+        )"""
+
+        # sample a point in z based upon the row and column
+        xpos = xmin + x_block * col + x_block / 2
+        ypos = ymax - y_block * row - y_block / 2
+        # main_ax.text(x=xpos, y=ypos, s=column, color=pal[column])
+
+        axs[column]["xpos"] = xpos
+        axs[column]["ypos"] = ypos
+
+    main_ax.set_xlim([xmin, xmax])
+    main_ax.set_ylim([ymin, ymax])
+
+    # create a voronoi diagram over the x and y pos points
+    points = [[axs[i]["xpos"], axs[i]["ypos"]] for i in axs.keys()]
+
+    voronoi_kdtree = cKDTree(points)
+    vor = Voronoi(points)
+
+    # plot voronoi
+    # voronoi_plot_2d(vor, ax = main_ax);
+
+    # find where each point lies in the voronoi diagram
+    z = z[:n_subset]
+    point_dist, point_regions = voronoi_kdtree.query(list(z))
+
+    lines_list = []
+    # loop through regions and select a point
+    for key in axs.keys():
+        # sample a point in (or near) voronoi region
+        nearest_points = np.argsort(np.abs(point_regions - key))
+        possible_points = np.where(point_regions == point_regions[nearest_points][0])[0]
+        chosen_point = np.random.choice(a=possible_points, size=1)[0]
+        point_regions[chosen_point] = 1e4
+        # plot point
+        if enlarge_points > 0:
+            if color_points:
+                color = pal[key]
+            else:
+                color = "k"
+            main_ax.scatter(
+                [z[chosen_point, 0]],
+                [z[chosen_point, 1]],
+                color=color,
+                s=enlarge_points,
+            )
+        # draw spec
+        axs[key]["ax"].matshow(
+            specs[chosen_point],
+            origin=img_origin,
+            interpolation="none",
+            aspect="auto",
+            **matshow_kwargs,
+        )
+
+        axs[key]["ax"].set_xticks([])
+        axs[key]["ax"].set_yticks([])
+        if color_points:
+            plt.setp(axs[key]["ax"].spines.values(), color=pal[key])
+
+        for i in axs[key]["ax"].spines.values():
+            i.set_linewidth(border_line_width)
+
+        # draw a line between point and image
+        if draw_lines:
+            mytrans = (
+                axs[key]["ax"].transAxes + axs[key]["ax"].figure.transFigure.inverted()
+            )
+
+            line_end_pos = [0.5, 0.5]
+
+            if axs[key]["row"] == 0:
+                line_end_pos[1] = 0
+            if axs[key]["row"] == column_size - 1:
+                line_end_pos[1] = 1
+
+            if axs[key]["col"] == 0:
+                line_end_pos[0] = 1
+            if axs[key]["col"] == column_size - 1:
+                line_end_pos[0] = 0
+
+            infig_position = mytrans.transform(line_end_pos)
+
+            xpos, ypos = main_ax.transLimits.transform(
+                (z[chosen_point, 0], z[chosen_point, 1])
+            )
+
+            mytrans2 = main_ax.transAxes + main_ax.figure.transFigure.inverted()
+            infig_position_start = mytrans2.transform([xpos, ypos])
+
+            color = pal[key] if color_points else "k"
+            lines_list.append(
+                lines.Line2D(
+                    [infig_position_start[0], infig_position[0]],
+                    [infig_position_start[1], infig_position[1]],
+                    color=color,
+                    transform=fig.transFigure,
+                    **line_kwargs,
+                )
+            )
+    if draw_lines:
+        for l in lines_list:
+            fig.lines.append(l)
+
+    gs.update(wspace=0, hspace=0)
+    # gs.update(wspace=0.5, hspace=0.5)
+
+    fig = plt.gcf()
+
+    if ax is not None:
+        buf = io.BytesIO()
+        plt.savefig(buf, dpi=300, bbox_inches="tight", pad_inches=0)
+        buf.seek(0)
+        im = Image.open(buf)
+        ax.imshow(im)
+        plt.close(fig)
+
+    return fig, axs, main_ax, [xmin, xmax, ymin, ymax]
+
+scatter_spec(
+    np.vstack(z_rep),
+    specs_rep,
+    column_size=8,
+    pal_color="tab20",
+    color_points=False,
+    enlarge_points=20,
+    figsize=(10, 10),
+    scatter_kwargs = {
+        'labels': list(clusterer_rep),
+        'alpha': 0.25,
+        's': 0.25,
+        'show_legend': False
+    },
+    matshow_kwargs = {
+        'cmap': plt.cm.Greys
+    },
+    line_kwargs = {
+        'lw':3,
+        'ls':"dashed",
+        'alpha':0.25,
+    },
+    draw_lines=True,
+    n_subset= 1000,
+    border_line_width = 3,
+);
+plt.title('Replication')
+plt.show()
+
+scatter_spec(
+    np.vstack(z_sparse),
+    specs_sparse,
+    column_size=8,
+    pal_color="tab20",
+    color_points=False,
+    enlarge_points=20,
+    figsize=(10, 10),
+    scatter_kwargs = {
+        'labels': list(clusterer_sparse),
+        'alpha': 0.25,
+        's': 0.25,
+        'show_legend': False
+    },
+    matshow_kwargs = {
+        'cmap': plt.cm.Greys
+    },
+    line_kwargs = {
+        'lw':3,
+        'ls':"dashed",
+        'alpha':0.25,
+    },
+    draw_lines=True,
+    n_subset= 1000,
+    border_line_width = 3,
+);
+plt.title('Sparse')
+plt.show()
+```
+
+![Original](original_bengalese.png)
+
+While there are some differences between the replication, and the original, they are within expectations while working with datasets with multiple transformations. The clustering seems appropriate to the syllables used. The sparse coding does not seem in line with expectations, and seems to not replicate the results by the original paper, or the replication part of the experiment.
+
+```{python}
+import numpy as np
+from sklearn.neighbors import NearestNeighbors
+import pandas as pd
+import matplotlib.pyplot as plt
+from random import sample
+from numpy.random import uniform
+
+# function to compute hopkins's statistic for the dataframe X
+def hopkins_statistic(X):
+    
+    # X=X.values  #convert dataframe to a numpy array
+    sample_size = int(X.shape[0]*0.05)
+    
+    #a uniform random sample in the original data space
+    X_uniform_random_sample = uniform(X.min(axis=0), X.max(axis=0) ,(sample_size , X.shape[1]))
+    
+    #a random sample of size sample_size from the original data X
+    random_indices=sample(range(0, X.shape[0], 1), sample_size)
+    X_sample = X[random_indices]
+   
+    
+    #initialise unsupervised learner for implementing neighbor searches
+    neigh = NearestNeighbors(n_neighbors=15)
+    nbrs=neigh.fit(X)
+    
+    #u_distances = nearest neighbour distances from uniform random sample
+    u_distances , u_indices = nbrs.kneighbors(X_uniform_random_sample , n_neighbors=15)
+    u_distances = u_distances[: , 0] #distance to the first (nearest) neighbour
+    
+    #w_distances = nearest neighbour distances from a sample of points from original data X
+    w_distances , w_indices = nbrs.kneighbors(X_sample , n_neighbors=15)
+    #distance to the second nearest neighbour (as the first neighbour will be the point itself, with distance = 0)
+    w_distances = w_distances[: , 1]
+    
+    
+    u_sum = np.sum(u_distances)
+    w_sum = np.sum(w_distances)
+    
+    #compute and return hopkins' statistic
+    H = u_sum/ (u_sum + w_sum)
+    return H
+    
+print('Replication: ', 1- hopkins_statistic(np.vstack(z_rep)) ) # to align with paper's alternate formula
+print('Sparse: ', 1- hopkins_statistic(np.vstack(z_sparse) ))
+
+```
+![Hopkin Statistic](hopkin.png)
+
+The hopkin statistics calculated over the replication and the sparse coding both seem in line with expectations and results from the original paper.
+
+
+### Exploratory analyses
+
+Exploratory analysis was performed by using a sparse coding transformation with 20 components, learned over Bengalese finch song. This method compressed the spectrograms formed from the waveforms into sparse components, before uncompressing and turning it back into a waveform. This was used to test the effect of this data reduction method on the clusterability. While the hopkins statistic ended up being similar, and thus the datset was techincally similarly clusterable, the syllables clustered on are not correct. 
+
+## Discussion
+
+### Summary of Replication Attempt
+
+The primary result from the original paper seems to have been fully replicated. The UMAP projections successfully projected birdsong syllables correctly and in a similar manner to the original paper, and has a similar hopkins statistic indicating that the UMAP projections are similarly clusterable. The sparse coding also had a low, but slightly different hopkins statistic, but a much different projection into UMAP space, with less discrete clusters. This seems to indicate that hopkins statistic may be less helpful for discrete clusters, and rather just points in some form of clustering, and may point to issues with the statistic.
+ 
+
+### Commentary
+While the code is publically available and has comments, it is not well outlined or easy to troubleshoot. The code relies on having very precise setups (or making large edits to the code) for it to run properly, and even then it is outdated by several versions of packages. Much of the work from this project went into figuring out workarounds to very specific deprecated functions that seemed to be missing from the starting environment. The power of this code base is large, but the ease in which to run it was surprisingly low considering the high usage rates within the Gentner lab. 
+
+On the sparse coding element: when this idea was proposed, I fundamentally misunderstood how the AVGN program worked, and believed it worked partially on spectrograms, rather than on waveforms with spectrogram visualizations. According to information theory, any transformation in data will either maintain the amount of information, or incur a loss. In converting from spectrograms back to waveforms, there is a significant chance of important data loss, by using an additional transformation of sparse coding, which is designed to decrease total information by removing unimportant information, there is a higher cost of data loss. This likely caused the incorrect clustering shown below, as at some point in the transformation process the necessary information in syllables was lost.
+
+
+As with many computational techniques, there is the risk that results are not meaningful. The sparse coding resulted in statistically significant results, but practically ingsignificant results. This points to possible limitations of hopkins statistic, and perhaps a different statistic may be more meaningful for continuing to work within this space. In using this framework for analyzing vocalizations, further validation than the code base is needed to prove. This code base was primarily used to confirm already held beliefs, and show compuational techniques that can replace older slower methods. For my purposes in working with European starlings and zebra finches, it will work well due to the prior analyses done by Tim Sainburg and others. For novel vocalizations this will require careful calibration and validation to ensure both statistical and practical results.
