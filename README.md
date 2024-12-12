@@ -1,5 +1,9 @@
-# Replication Project Template
+# Sainburg 2020 Replication Project
 
-This is a GitHub template to use for replications projects in PSYCH 201a / CSS 204. Create a new repo using this as a template in order to use it.
+This project was designed to fulfil the requirements of the computational reproducability project for PSYC201A. This reproducability project examined Tim Sainburg et al "Finding, visualizing, and quantifying latent structure across diverse animal vocal repertoires": https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1008228
 
-The template contains the replication project template as well as a file called `anonymize.py` that you can run to remove personally-identifiable information from the data exported by Qualtrics. Just run `python anonymize.py` to anonymize all Qualtrics `csv` files in the `data` directory.
+This paper examined a method of examining animal vocalizations that are agnostic to the specific animal, but can be used for may different species. It primarily used dimensional reduction techniques (UMAP), on syllable level segments of animal vocalization, afterwards rating the clusterin that appears.
+
+The code base for this was originally designed by Tim Sainburg, hosted at his github: https://github.com/timsainb/avgn_paper/tree/V2/avgn. The data can be downloaded from https://ndownloader.figshare.com/articles/3470165/versions/1. This analysis also investigated using sparse coding to only perform analysis on the important information in animal vocalizations, rather than the entire waveform.
+
+The notebooks used for replication on the 'notebooks' folder, the final report and writeup can be found in the 'writeup' folder.
